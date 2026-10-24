@@ -11,6 +11,8 @@ DST runs your system in a simulated world. the simulator controls the clock, the
 ```sh
 cargo run            # seed 42
 cargo run -- 1234    # a different seed
+cargo run -- 42 bad  # bad network: drop, duplicate, delay, reorder
+cargo run -- 42 bug  # turn on the planted bug in the followers
 cargo test           # determinism tests
 ```
 
@@ -19,7 +21,7 @@ cargo test           # determinism tests
 1. [x] seeded RNG and fake clock
 2. [x] fake network: drop, delay, duplicate, reorder
 3. [x] toy system: 3 nodes that replicate a small key-value store
-4. [ ] invariants checked after every step
+4. [x] invariants checked after every step
 5. [ ] run thousands of seeds
 6. [ ] replay and event log, then shrink the failing run
 7. [ ] real code with `turmoil`

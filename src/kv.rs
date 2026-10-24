@@ -25,11 +25,12 @@ pub enum Msg {
 pub struct Node {
     pub id: usize,
     pub store: BTreeMap<String, u64>, // BTreeMap, so that printing it gives a fixed order
+    pub planted_bug: bool,            // turn on the bug that we plant on purpose (milestone 4)
 }
 
 impl Node {
-    pub fn new(id: usize) -> Node {
-        Node { id, store: BTreeMap::new() }
+    pub fn new(id: usize, planted_bug: bool) -> Node {
+        Node { id, store: BTreeMap::new(), planted_bug }
     }
 
     /// handle one message. returns the messages to send, as (to, msg)
@@ -42,6 +43,12 @@ impl Node {
                     .filter(|&peer| peer != self.id)
                     .map(|peer| (peer, Msg::Replicate { key: key.clone(), val }))
                     .collect()
+            }
+            Msg::Replicate { key, val } if self.planted_bug => {
+                // the planted bug: `or_insert` only writes when the key is new
+                // so the follower keeps the FIRST value and ignores every newer one
+                self.store.entry(key).or_insert(val);
+                vec![]
             }
             Msg::Replicate { key, val } => {
                 self.store.insert(key, val);

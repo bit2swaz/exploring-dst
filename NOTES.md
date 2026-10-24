@@ -15,3 +15,9 @@
 - 3 nodes. a client sends puts to the leader (node 0) and the leader tells the 2 followers. no order numbers, no retries, no replies
 - a node never touches the network or the clock. it gets 1 message and returns the messages it wants to send. the simulator does everything else
 - on a perfect network, all 100 test seeds end with 3 equal stores
+
+## milestone 4: invariants
+
+- 3 new rules which are checked by the computer: no made up values, no going back (both after every step), and all stores are the same (only at the end when no messages are left)
+- planted a bug on purpose: followers use `or_insert` instead of `insert` so they keep the first value forever. rule 3 catches it on every seed (as it should)
+- the naive design from milestone 3 breaks rule 2 on all 100 bad network seeds. without the per step check, 7 of those 100 seeds pass because the stores agree at the end purely by luck

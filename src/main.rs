@@ -1,8 +1,10 @@
+mod check;
 mod clock;
 mod kv;
 mod net;
 mod rng;
 
+use check::Checker;
 use clock::Clock;
 use kv::{CLIENT, LEADER, Msg, Node};
 use net::{Faults, Network};
@@ -26,13 +28,23 @@ fn send(net: &mut Network<Msg>, rng: &mut Rng, clock: &Clock, log: &mut Vec<Stri
     }
 }
 
-/// run the key-value store simulation. returns the event log and the nodes at the end
-fn simulate(seed: u64, faults: Faults) -> (Vec<String>, Vec<Node>) {
+/// what one run gives back
+struct Outcome {
+    log: Vec<String>,
+    violation: Option<String>, // the first broken rule or None if all rules held
+}
+
+/// run the key-value store simulation
+/// `planted_bug` turns on the bug in the followers
+fn simulate(seed: u64, faults: Faults, planted_bug: bool) -> Outcome {
     let mut rng = Rng::new(seed);
     let mut clock = Clock::new();
     let mut net = Network::new(faults);
     let mut log = Vec::new();
-    let mut nodes: Vec<Node> = (0..NODES).map(Node::new).collect();
+    let mut checker = Checker::new(NODES);
+    let mut violation = None;
+    // only the followers get the bug. the leader is always correct
+    let mut nodes: Vec<Node> = (0..NODES).map(|id| Node::new(id, planted_bug && id != LEADER)).collect();
 
     // the client sends all its puts at t=0. the rng picks the key. the value is the op number
     for val in 0..OPS {
@@ -47,12 +59,24 @@ fn simulate(seed: u64, faults: Faults) -> (Vec<String>, Vec<Node>) {
         for (to, msg) in nodes[env.to].on_message(env.msg, NODES) {
             send(&mut net, &mut rng, &clock, &mut log, env.to, to, msg);
         }
+        // check the rules after every step. stop at the first broken rule
+        if let Err(e) = checker.after_step(&nodes) {
+            violation = Some(e);
+            break;
+        }
+    }
+    // the network is empty (or we stopped). if no rule broke yet then check rule 3
+    if violation.is_none() {
+        violation = checker.at_end(&nodes).err();
     }
 
     for node in &nodes {
         log.push(format!("end node{} {:?}", node.id, node.store));
     }
-    (log, nodes)
+    if let Some(e) = &violation {
+        log.push(format!("VIOLATION at t={}ms: {e}", clock.now()));
+    }
+    Outcome { log, violation }
 }
 
 fn main() {
@@ -61,13 +85,18 @@ fn main() {
         .nth(1)
         .map(|s| s.parse().expect("seed must be a number"))
         .unwrap_or(42);
-    // second argument "bad" turns on the bad network
-    let faults = if std::env::args().nth(2).as_deref() == Some("bad") { FAULTS } else { PERFECT };
+    // extra words after the seed: "bad" = bad network, "bug" = planted bug
+    let words: Vec<String> = std::env::args().skip(2).collect();
+    let faults = if words.iter().any(|w| w == "bad") { FAULTS } else { PERFECT };
+    let planted_bug = words.iter().any(|w| w == "bug");
 
     println!("seed={seed}");
-    let (log, _nodes) = simulate(seed, faults);
-    for line in log {
+    let out = simulate(seed, faults, planted_bug);
+    for line in &out.log {
         println!("{line}");
+    }
+    if out.violation.is_some() {
+        std::process::exit(1); // a broken rule = a failed run
     }
 }
 
@@ -77,23 +106,33 @@ mod tests {
 
     #[test]
     fn same_seed_gives_same_log() {
-        assert_eq!(simulate(7, FAULTS).0, simulate(7, FAULTS).0);
+        assert_eq!(simulate(7, FAULTS, false).log, simulate(7, FAULTS, false).log);
     }
 
     #[test]
     fn different_seed_gives_different_log() {
-        assert_ne!(simulate(7, FAULTS).0, simulate(8, FAULTS).0);
+        assert_ne!(simulate(7, FAULTS, false).log, simulate(8, FAULTS, false).log);
     }
 
     #[test]
-    fn perfect_network_all_nodes_agree() {
-        // 100 seeds = 100 different random clients. all must end with 3 equal stores
+    fn perfect_network_breaks_no_rule() {
+        // 100 seeds = 100 different random clients. no rule may break
         for seed in 0..100 {
-            let (_log, nodes) = simulate(seed, PERFECT);
-            assert!(!nodes[LEADER].store.is_empty());
-            for node in &nodes {
-                assert_eq!(node.store, nodes[LEADER].store, "seed {seed}: node{} differs", node.id);
-            }
+            let out = simulate(seed, PERFECT, false);
+            assert_eq!(out.violation, None, "seed {seed}");
         }
+    }
+
+    #[test]
+    fn planted_bug_gets_caught() {
+        let out = simulate(42, PERFECT, true);
+        assert!(out.violation.unwrap().starts_with("rule 3"));
+    }
+
+    #[test]
+    fn bad_network_gets_caught() {
+        // the naive design from milestone 3 has no version numbers so reorder breaks it
+        let out = simulate(42, FAULTS, false);
+        assert!(out.violation.unwrap().starts_with("rule 2"));
     }
 }
