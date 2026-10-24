@@ -34,3 +34,11 @@
 - shrink = find the shortest run that breaks the same rule. try 1 put on every seed, then 2 and so on. the lossy failure went from 60 log lines (seed 15, 10 puts) to 10 lines (seed 117, 1 put)
 - the shortest run tells you what the bug exactly needs, say for example, a lost replicate needs 1 put. going back in time (rule 2) and the planted `or_insert` bug both need 2 puts to the same key
 - swapped BTreeMap for HashMap: seed 15 gave 5 diff fingerprints in 5 runs. rust's HashMap picks a new random order in each process. one HashMap and the replay is gone
+
+## milestone 7: real code w turmoil
+
+- wrote a tiny real async service (leader + 2 followers over UDP) w same naive design as milestone 3. turmoil runs all 3 hosts on 1 thread w a fake clock, a fake network and one seed
+- the service code doesnt know its in a simulation. the only change is the import: `turmoil::net::UdpSocket` in place of `tokio::net::UdpSocket`
+- used UDP and not TCP: turmoil never re-sends a lost TCP segment so TCP faults there do not act like real TCP
+- bad network (5% link breaks, 1 - 100ms latency): 147 of 200 seeds fail. seed 0: leader has a=6 but f1 has a=9. the follower is "more right" than the leader because both got the puts out of order
+- mild network (1% link breaks, no reorder): 12 of 200 fail. seed 26: f2 missed every replicate while its link was broken. same bug as our milestone 5 lossy run
