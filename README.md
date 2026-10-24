@@ -17,7 +17,7 @@ cargo test           # determinism tests
 ## milestones
 
 1. [x] seeded RNG and fake clock
-2. [ ] fake network: drop, delay, duplicate, reorder
+2. [x] fake network: drop, delay, duplicate, reorder
 3. [ ] toy system: 3 nodes that replicate a small key-value store
 4. [ ] invariants checked after every step
 5. [ ] run thousands of seeds

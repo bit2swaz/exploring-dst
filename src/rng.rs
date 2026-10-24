@@ -31,4 +31,9 @@ impl Rng {
     pub fn below(&mut self, n: u64) -> u64 {
         self.next_u64() % n
     }
+
+    /// true with a chance of `pct` percent (0 = never, 100 = always)
+    pub fn chance(&mut self, pct: u64) -> bool {
+        self.below(100) < pct
+    }
 }
