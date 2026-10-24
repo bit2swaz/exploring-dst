@@ -9,13 +9,14 @@ DST runs your system in a simulated world. the simulator controls the clock, the
 ## run it
 
 ```sh
-cargo run               # seed 42
-cargo run -- 1234       # a different seed
-cargo run -- 42 bad     # bad network: drop, duplicate, delay, reorder
-cargo run -- 42 lossy   # lossy network: keeps the order, loses 1% of messages
-cargo run -- 42 bug     # turn on the planted bug in the followers
-cargo run -- hunt lossy # run 10000 seeds, print the failing ones
-cargo test              # determinism tests
+cargo run                   # seed 42
+cargo run -- 1234           # a diff seed
+cargo run -- 42 bad         # bad network: drop, duplicate, delay, reorder
+cargo run -- 42 lossy       # lossy network: keeps the order, loses 1% of messages
+cargo run -- 42 bug         # turn on the planted bug in the followers
+cargo run -- 42 lossy ops=1 # the client sends only 1 put
+cargo run -- hunt lossy     # run 10000 seeds, print the failing ones, then shrink the first one
+cargo test                  # determinism tests
 ```
 
 ## milestones
@@ -25,7 +26,7 @@ cargo test              # determinism tests
 3. [x] toy system: 3 nodes that replicate a small key-value store
 4. [x] invariants checked after every step
 5. [x] run thousands of seeds
-6. [ ] replay and event log, then shrink the failing run
+6. [x] replay and event log, then shrink the failing run
 7. [ ] real code with `turmoil`
 8. [ ] (bonus) fake disk: lost writes, torn writes, missing fsync
 

@@ -27,3 +27,10 @@
 - `cargo run -- hunt lossy` runs 10k seeds in ~1 second and prints the failing ones + the command to replay the first one
 - the lossy network keeps the order but loses 1% of messages. only 555 of the 10k seeds fail. the first is seed 15: a `Replicate b=9` to node1 got lost so node1 is stuck on b=8
 - a lost `Put` does no harm because since the leader never had it, nobody has it. only a lost `Replicate` breaks the rules
+
+## milestone 6: replay and shrink
+
+- every log gets a fingerprint (a fnv-1a hash). the hunter and the replay print the same fingerprint so the replay is the exact same story
+- shrink = find the shortest run that breaks the same rule. try 1 put on every seed, then 2 and so on. the lossy failure went from 60 log lines (seed 15, 10 puts) to 10 lines (seed 117, 1 put)
+- the shortest run tells you what the bug exactly needs, say for example, a lost replicate needs 1 put. going back in time (rule 2) and the planted `or_insert` bug both need 2 puts to the same key
+- swapped BTreeMap for HashMap: seed 15 gave 5 diff fingerprints in 5 runs. rust's HashMap picks a new random order in each process. one HashMap and the replay is gone
