@@ -42,3 +42,11 @@
 - used UDP and not TCP: turmoil never re-sends a lost TCP segment so TCP faults there do not act like real TCP
 - bad network (5% link breaks, 1 - 100ms latency): 147 of 200 seeds fail. seed 0: leader has a=6 but f1 has a=9. the follower is "more right" than the leader because both got the puts out of order
 - mild network (1% link breaks, no reorder): 12 of 200 fail. seed 26: f2 missed every replicate while its link was broken. same bug as our milestone 5 lossy run
+
+## milestone 8 (bonus): fake disk
+
+- fake disk with 2 layers: the page cache (`write`) and the durable disk (`fsync`). on a power cut, each write that is not fsync'd is lost, torn or kept. the seed picks when the power goes out
+- a tiny WAL on top: 10 byte records with a 1 byte checksum. after the crash, recovery reads records until the first bad checksum
+- rule A: every put that said "ok" survives. rule B: every recovered record is the one we wrote
+- correct log (fsync before "ok"): 0 of 10k seeds fail even w torn writes. planted bug (no fsync): 9296 of 10k fail. with no crash the bug can never show
+- swapped the checksum for an "all zeros = end of log" check: 151 of 10k fail with garbage records. and on seed 7 a torn record came back correct by pure luck

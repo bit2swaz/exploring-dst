@@ -1,5 +1,6 @@
 mod check;
 mod clock;
+mod disk;
 mod kv;
 mod net;
 mod rng;
@@ -149,6 +150,7 @@ fn shrink(setup: Setup, rule: &str) -> Option<(u64, Setup)> {
 /// usage:
 ///   cargo run -- <seed> [bad|lossy] [bug] [ops=N]   run one seed and print its log
 ///   cargo run -- hunt [bad|lossy] [bug] [ops=N]     run many seeds, then shrink the failure
+///   cargo run -- disk [<seed>] [bug]                the fake disk (milestone 8)
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let has = |word: &str| args.iter().any(|a| a == word);
@@ -159,7 +161,10 @@ fn main() {
         ops: ops.unwrap_or(OPS),
     };
 
-    if has("hunt") {
+    if has("disk") {
+        // milestone 8: the fake disk. a number = replay that seed, no number = hunt
+        disk::cli(args.iter().find_map(|a| a.parse().ok()), setup.planted_bug);
+    } else if has("hunt") {
         hunt(setup);
     } else {
         // the first argument is the seed. default = 42

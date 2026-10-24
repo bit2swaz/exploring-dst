@@ -16,6 +16,8 @@ cargo run -- 42 lossy                       # lossy network: keeps the order, lo
 cargo run -- 42 bug                         # turn on the planted bug in the followers
 cargo run -- 42 lossy ops=1                 # the client sends only 1 put
 cargo run -- hunt lossy                     # run 10000 seeds, print the failing ones, then shrink the first one
+cargo run -- disk                           # fake disk: crash 10000 seeds, check the log
+cargo run -- disk bug                       # same, with the missing-fsync bug
 cargo test                                  # determinism tests
 cargo test --test turmoil_kv -- --nocapture # milestone 7: a real tokio service under turmoil
 ```
@@ -29,6 +31,6 @@ cargo test --test turmoil_kv -- --nocapture # milestone 7: a real tokio service 
 5. [x] run thousands of seeds
 6. [x] replay and event log, then shrink the failing run
 7. [x] real code with `turmoil`
-8. [ ] (bonus) fake disk: lost writes, torn writes, missing fsync
+8. [x] fake disk: lost writes, torn writes, missing fsync
 
 no external crates for milestones 1-6. milestone 7 adds `turmoil` and `tokio` as dev-deps only
