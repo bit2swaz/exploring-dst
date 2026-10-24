@@ -66,3 +66,43 @@ impl<M: Clone> Network<M> {
         self.next_seq += 1;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const BAD: Faults = Faults { drop_pct: 10, dup_pct: 10, max_delay_ms: 50 };
+
+    /// send messages 0..10 from node 0 to node 1, all at t=0. return them in delivery order
+    fn deliver_all(seed: u64, faults: Faults) -> Vec<u64> {
+        let mut rng = Rng::new(seed);
+        let mut net = Network::new(faults);
+        for i in 0..10 {
+            net.send(&mut rng, 0, 0, 1, i);
+        }
+        let mut got = Vec::new();
+        while let Some((_at, env)) = net.next() {
+            got.push(env.msg);
+        }
+        got
+    }
+
+    #[test]
+    fn perfect_network_keeps_order() {
+        let perfect = Faults { drop_pct: 0, dup_pct: 0, max_delay_ms: 1 };
+        assert_eq!(deliver_all(42, perfect), (0..10).collect::<Vec<u64>>());
+    }
+
+    #[test]
+    fn bad_network_reorders() {
+        let got = deliver_all(42, BAD);
+        let mut sorted = got.clone();
+        sorted.sort();
+        assert_ne!(got, sorted, "seed 42 must deliver out of order");
+    }
+
+    #[test]
+    fn full_drop_delivers_nothing() {
+        assert!(deliver_all(42, Faults { drop_pct: 100, ..BAD }).is_empty());
+    }
+}

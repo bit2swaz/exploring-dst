@@ -22,3 +22,17 @@ impl Clock {
         self.now_ms += ms;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn clock_moves_only_on_advance() {
+        let mut clock = Clock::new();
+        assert_eq!(clock.now(), 0);
+        assert_eq!(clock.now(), 0); // reading the time doesnt move it
+        clock.advance(25);
+        assert_eq!(clock.now(), 25);
+    }
+}
